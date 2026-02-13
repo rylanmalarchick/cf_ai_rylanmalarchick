@@ -5,7 +5,7 @@ This document records the AI prompts and interactions used during the developmen
 ## Development Environment
 
 - **AI Tool**: Claude (Anthropic), used via the [pi coding agent](https://github.com/mariozechner/pi-coding-agent)
-- **Model**: Claude Opus 4 (claude-opus-4-20250514)
+- **Model**: Claude Opus 4.6
 - **Usage**: Architecture planning, code generation, debugging, documentation
 
 ## Prompts
