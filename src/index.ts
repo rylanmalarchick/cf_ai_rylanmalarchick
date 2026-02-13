@@ -45,6 +45,27 @@ interface ToolCall {
   };
 }
 
+/** Workers AI returns a flatter format than OpenAI */
+interface WorkersAIToolCall {
+  name: string;
+  arguments: Record<string, unknown> | string;
+}
+
+/** Normalize Workers AI tool calls to our internal format */
+function normalizeToolCall(tc: WorkersAIToolCall, index: number): ToolCall {
+  return {
+    id: `call_${index}`,
+    type: "function",
+    function: {
+      name: tc.name,
+      arguments:
+        typeof tc.arguments === "string"
+          ? tc.arguments
+          : JSON.stringify(tc.arguments),
+    },
+  };
+}
+
 interface SavedConfig {
   name: string;
   params: HardwareParams;
@@ -248,11 +269,12 @@ export class PulseLabAgent extends Agent<Env, AgentState> {
         tools,
         max_tokens: 2048,
       }
-    )) as { response?: string; tool_calls?: ToolCall[] };
+    )) as { response?: string; tool_calls?: WorkersAIToolCall[] };
 
     // Handle tool calls
-    if (response?.tool_calls && response.tool_calls.length > 0) {
-      const toolCalls = response.tool_calls;
+    const rawToolCalls = response?.tool_calls ?? [];
+    if (rawToolCalls.length > 0) {
+      const toolCalls = rawToolCalls.map(normalizeToolCall);
 
       // Add assistant message with tool calls
       const assistantMsg: ChatMessage = {
