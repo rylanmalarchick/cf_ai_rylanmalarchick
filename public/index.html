@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PulseLab — Quantum Pulse Calibration Advisor</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface-2: #1a1a26;
+      --border: #2a2a3a;
+      --text: #e0e0e8;
+      --text-dim: #8888a0;
+      --accent: #6366f1;
+      --accent-dim: #4f46e5;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface);
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    header h1 span {
+      color: var(--accent);
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .header-right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .status-dot.disconnected { background: var(--red); }
+    .status-dot.connecting { background: var(--amber); }
+
+    /* Main layout */
+    .container {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    .sidebar h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .preset {
+      padding: 10px 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .preset:hover { border-color: var(--accent); }
+
+    .preset .name {
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .preset .params {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: var(--mono);
+    }
+
+    .info-box {
+      padding: 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-dim);
+    }
+
+    .info-box a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .info-box a:hover { text-decoration: underline; }
+
+    /* Chat area */
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .message {
+      max-width: 720px;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: var(--accent-dim);
+      padding: 10px 16px;
+      border-radius: 16px 16px 4px 16px;
+      max-width: 480px;
+    }
+
+    .message.assistant {
+      align-self: flex-start;
+    }
+
+    .message.assistant .content {
+      padding: 12px 16px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 4px 16px 16px 16px;
+    }
+
+    .message.assistant .content pre {
+      font-family: var(--mono);
+      font-size: 12px;
+      background: var(--bg);
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin: 8px 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message.system {
+      align-self: center;
+      color: var(--text-dim);
+      font-size: 12px;
+      font-style: italic;
+    }
+
+    .thinking {
+      align-self: flex-start;
+      display: flex;
+      gap: 4px;
+      padding: 12px 16px;
+    }
+
+    .thinking span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      animation: pulse 1.2s infinite;
+    }
+
+    .thinking span:nth-child(2) { animation-delay: 0.2s; }
+    .thinking span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    /* Input */
+    .input-area {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      max-width: 720px;
+    }
+
+    .input-row textarea {
+      flex: 1;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      resize: none;
+      outline: none;
+      min-height: 44px;
+      max-height: 120px;
+    }
+
+    .input-row textarea:focus { border-color: var(--accent); }
+
+    .input-row textarea::placeholder { color: var(--text-dim); }
+
+    .send-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.15s;
+      align-self: flex-end;
+    }
+
+    .send-btn:hover { background: var(--accent-dim); }
+    .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Welcome */
+    .welcome {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+      text-align: center;
+    }
+
+    .welcome h2 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .welcome p {
+      color: var(--text-dim);
+      max-width: 480px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .examples {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .example-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: var(--text);
+      cursor: pointer;
+      text-align: left;
+      font-size: 13px;
+      transition: border-color 0.15s;
+    }
+
+    .example-btn:hover { border-color: var(--accent); }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1><span>Pulse</span>Lab</h1>
+      <div class="subtitle">Quantum pulse calibration advisor &middot; arXiv:2511.12799</div>
+    </div>
+    <div class="header-right">
+      <div class="status-dot connecting" id="status-dot"></div>
+      <span style="font-size: 12px; color: var(--text-dim)" id="status-text">Connecting...</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <aside class="sidebar">
+      <div>
+        <h3>Hardware Presets</h3>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="preset" onclick="loadPreset('IQM Garnet', -200, 37, 9.6, 20)">
+            <div class="name">IQM Garnet</div>
+            <div class="params">&alpha;=-200MHz T1=37&mu;s T2=9.6&mu;s 20ns</div>
+          </div>
+          <div class="preset" onclick="loadPreset('IBM Eagle (typical)', -330, 100, 50, 35)">
+            <div class="name">IBM Eagle (typical)</div>
+            <div class="params">&alpha;=-330MHz T1=100&mu;s T2=50&mu;s 35ns</div>
+          </div>
+          <div class="preset" onclick="loadPreset('Fast gate test', -200, 37, 9.6, 10)">
+            <div class="name">Fast gate (10ns)</div>
+            <div class="params">&alpha;=-200MHz T1=37&mu;s T2=9.6&mu;s 10ns</div>
+          </div>
+          <div class="preset" onclick="loadPreset('High-coherence device', -180, 200, 80, 25)">
+            <div class="name">High-coherence device</div>
+            <div class="params">&alpha;=-180MHz T1=200&mu;s T2=80&mu;s 25ns</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3>About</h3>
+        <div class="info-box">
+          PulseLab uses real physics computations (not LLM guessing) to analyze
+          error budgets for transmon single-qubit gates. The formulas come from
+          a systematic DRAG vs. GRAPE comparison on a three-level transmon model.<br><br>
+          Paper: <a href="https://arxiv.org/abs/2511.12799" target="_blank">arXiv:2511.12799</a><br>
+          Code: <a href="https://github.com/rylanmalarchick/QubitPulseOpt" target="_blank">QubitPulseOpt</a><br>
+          Built by <a href="https://rylanmalarchick.com" target="_blank">Rylan Malarchick</a>
+        </div>
+      </div>
+    </aside>
+
+    <div class="chat-area">
+      <div class="messages" id="messages">
+        <div class="welcome" id="welcome">
+          <h2>Quantum Pulse Calibration</h2>
+          <p>
+            Should you use GRAPE or is DRAG good enough? Give me your transmon
+            hardware parameters and I'll compute the error budget, identify the
+            dominant error source, and tell you whether numerical optimization
+            is worth the effort.
+          </p>
+          <div class="examples">
+            <button class="example-btn" onclick="sendExample(this.textContent)">
+              I have a transmon with &alpha;=-220 MHz, T1=45&mu;s, T2=15&mu;s. Running 20ns X gates. Should I bother with GRAPE?
+            </button>
+            <button class="example-btn" onclick="sendExample(this.textContent)">
+              Compare error budgets at 10ns vs 20ns vs 50ns gate time for IQM Garnet parameters.
+            </button>
+            <button class="example-btn" onclick="sendExample(this.textContent)">
+              My qubit has ~2 MHz frequency drift between calibration cycles. Which pulse method handles this best?
+            </button>
+            <button class="example-btn" onclick="sendExample(this.textContent)">
+              Explain the DRAG parameter beta. Why doesn't it depend on gate time?
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-area">
+        <div class="input-row">
+          <textarea
+            id="input"
+            placeholder="Describe your hardware or ask about pulse calibration..."
+            rows="1"
+            onkeydown="handleKeydown(event)"
+            oninput="autoResize(this)"
+          ></textarea>
+          <button class="send-btn" id="send-btn" onclick="sendMessage()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── State ──
+    let ws = null;
+    let sessionId = localStorage.getItem('pulselab_session') || crypto.randomUUID();
+    localStorage.setItem('pulselab_session', sessionId);
+    let isWaiting = false;
+
+    // ── WebSocket ──
+    function connect() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${location.host}/ws?session=${sessionId}`);
+
+      ws.onopen = () => {
+        document.getElementById('status-dot').className = 'status-dot';
+        document.getElementById('status-text').textContent = 'Connected';
+      };
+
+      ws.onclose = () => {
+        document.getElementById('status-dot').className = 'status-dot disconnected';
+        document.getElementById('status-text').textContent = 'Disconnected';
+        setTimeout(connect, 3000);
+      };
+
+      ws.onerror = () => {
+        document.getElementById('status-dot').className = 'status-dot disconnected';
+        document.getElementById('status-text').textContent = 'Error';
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'thinking') {
+          showThinking();
+        } else if (data.type === 'response') {
+          hideThinking();
+          addMessage('assistant', data.content);
+          isWaiting = false;
+          document.getElementById('send-btn').disabled = false;
+        } else if (data.type === 'error') {
+          hideThinking();
+          addMessage('system', 'Error: ' + data.content);
+          isWaiting = false;
+          document.getElementById('send-btn').disabled = false;
+        } else if (data.type === 'cleared') {
+          document.getElementById('messages').innerHTML = '';
+          document.getElementById('messages').appendChild(
+            document.getElementById('welcome') || createWelcome()
+          );
+        }
+      };
+    }
+
+    // ── UI ──
+    function addMessage(role, content) {
+      const welcome = document.getElementById('welcome');
+      if (welcome) welcome.style.display = 'none';
+
+      const container = document.getElementById('messages');
+      const div = document.createElement('div');
+      div.className = `message ${role}`;
+
+      if (role === 'assistant') {
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'content';
+        contentDiv.innerHTML = formatContent(content);
+        div.appendChild(contentDiv);
+      } else {
+        div.textContent = content;
+      }
+
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function formatContent(text) {
+      // Convert code blocks
+      text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre>$2</pre>');
+      // Convert inline code
+      text = text.replace(/`([^`]+)`/g, '<code style="background:var(--bg);padding:2px 4px;border-radius:2px;font-family:var(--mono);font-size:12px">$1</code>');
+      // Convert bold
+      text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      // Convert newlines to breaks (outside pre blocks)
+      text = text.replace(/\n/g, '<br>');
+      return text;
+    }
+
+    function showThinking() {
+      hideThinking();
+      const container = document.getElementById('messages');
+      const div = document.createElement('div');
+      div.className = 'thinking';
+      div.id = 'thinking';
+      div.innerHTML = '<span></span><span></span><span></span>';
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function hideThinking() {
+      const el = document.getElementById('thinking');
+      if (el) el.remove();
+    }
+
+    // ── Send ──
+    function sendMessage() {
+      const input = document.getElementById('input');
+      const text = input.value.trim();
+      if (!text || isWaiting || !ws || ws.readyState !== 1) return;
+
+      addMessage('user', text);
+      ws.send(JSON.stringify({ type: 'chat', content: text }));
+      input.value = '';
+      input.style.height = '44px';
+      isWaiting = true;
+      document.getElementById('send-btn').disabled = true;
+    }
+
+    function sendExample(text) {
+      document.getElementById('input').value = text;
+      sendMessage();
+    }
+
+    function loadPreset(name, alpha, t1, t2, gate) {
+      const msg = `Compute the error budget for my ${name} device: anharmonicity ${alpha} MHz, T1=${t1} \u00b5s, T2=${t2} \u00b5s, gate time ${gate} ns. What pulse method should I use?`;
+      document.getElementById('input').value = msg;
+      sendMessage();
+    }
+
+    function handleKeydown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    }
+
+    function autoResize(el) {
+      el.style.height = '44px';
+      el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    }
+
+    // ── Init ──
+    connect();
+  </script>
+</body>
+</html>
