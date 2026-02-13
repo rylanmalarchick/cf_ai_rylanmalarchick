@@ -12,7 +12,7 @@
  *   - WebSocket chat interface served from static HTML
  */
 
-import { Agent, type Connection, type ConnectionContext, type WSMessage, type AgentNamespace } from "agents";
+import { Agent, type Connection, type ConnectionContext, type WSMessage, type AgentNamespace, routeAgentRequest } from "agents";
 import {
   computeErrorBudget,
   estimateRobustness,
@@ -335,15 +335,6 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
-    // WebSocket upgrade for chat
-    if (url.pathname === "/ws") {
-      const sessionId = url.searchParams.get("session") || crypto.randomUUID();
-      const ns = env.PULSE_LAB_AGENT;
-      const id = ns.idFromName(sessionId);
-      const agent = ns.get(id);
-      return agent.fetch(request);
-    }
-
     // API: compute error budget directly (no LLM, just physics)
     if (url.pathname === "/api/error-budget" && request.method === "POST") {
       try {
@@ -361,6 +352,10 @@ export default {
         );
       }
     }
+
+    // Route WebSocket and agent requests via the Agents SDK
+    const agentResponse = await routeAgentRequest(request, env);
+    if (agentResponse) return agentResponse;
 
     // Serve static files (handled by [assets] in wrangler.toml)
     return new Response("Not found", { status: 404 });

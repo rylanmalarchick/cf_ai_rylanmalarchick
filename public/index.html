@@ -424,7 +424,8 @@
     // ── WebSocket ──
     function connect() {
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${location.host}/ws?session=${sessionId}`);
+      // Agents SDK routes: /agents/<kebab-class-name>/<room-name>
+      ws = new WebSocket(`${protocol}//${location.host}/agents/pulse-lab-agent/${sessionId}`);
 
       ws.onopen = () => {
         document.getElementById('status-dot').className = 'status-dot';
