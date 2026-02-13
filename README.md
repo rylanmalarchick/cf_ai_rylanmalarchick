@@ -102,14 +102,14 @@ The app will be available at `http://localhost:8787`.
 npm run deploy
 ```
 
-This deploys to your Cloudflare Workers subdomain (e.g., `cf-ai-pulse-lab.<your-subdomain>.workers.dev`).
+This deploys to your Cloudflare Workers subdomain: [`cf-ai-pulse-lab.rylan1012.workers.dev`](https://cf-ai-pulse-lab.rylan1012.workers.dev).
 
 ## REST API
 
 You can also compute error budgets directly without the chat interface:
 
 ```bash
-curl -X POST https://your-worker.workers.dev/api/error-budget \
+curl -X POST https://cf-ai-pulse-lab.rylan1012.workers.dev/api/error-budget \
   -H "Content-Type: application/json" \
   -d '{
     "alpha_mhz": -200,
